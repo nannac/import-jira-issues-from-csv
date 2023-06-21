@@ -71,13 +71,18 @@ foreach ($row in $csvData) {
     }
 
     if ($row.Labels) {
-        $issue.fields["labels"] = @($row.Labels -join ",")
+        $issue.fields["labels"] = @($row.Labels)
     }
 
     #If the row header is not in the standard fields, create a custom field by ID and assign the value.
     foreach ($key in $row.PSObject.Properties.Name) {
         if (!($issue.fields.keys -contains $key.toLower())) {
-            $issue.fields[$key] = $row.$key
+            # String custom fields (comma separated list of alphanumeric characters)
+            if ($row.key -match "^[a-zA-Z0-9]+(?:,[a-zA-Z0-9]+)*$") {
+                $issue.fields[$key] = $row.$key
+            }
+            # TODO: add other custom field types
+            
         }
     }
 
