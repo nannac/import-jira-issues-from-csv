@@ -8,7 +8,14 @@ param(
     [pscredential]$Credential
 )
 
+$File = "ISO 27002 - Annex A - JIRA Import -v2023-06-09.csv"
+$Server = "https://jira.ovt.com"
+$ProjectKey = "ISO27002"
 $apiUrl = "$Server/rest/api/2/issue/"
+
+if (-not $Server -match "http*") {
+    Write-Host "-Server parameter value must be in the format http(s)://<hostname|IP>." -ForegroundColor Yellow
+}
 
 # Check import file exists and is in the correct format.
 if (-Not (Test-Path $File)) {
@@ -64,12 +71,12 @@ foreach ($row in $csvData) {
     }
 
     if ($row.Labels) {
-        $issue.fields["labels"] = $row.Labels -Split ","
+        $issue.fields["labels"] = @($row.Labels -join ",")
     }
 
-    # If the row header is not in the standard fields, create a custom field by ID and assign the value.
+    #If the row header is not in the standard fields, create a custom field by ID and assign the value.
     foreach ($key in $row.PSObject.Properties.Name) {
-        if (-Not $issue.fields.keys.contains($key) -and $row.$key) {
+        if (!($issue.fields.keys -contains $key.toLower())) {
             $issue.fields[$key] = $row.$key
         }
     }
@@ -85,11 +92,12 @@ $headers = @{
     'Authorization' = "Basic $base64Creds"
 }
 
-foreach ($issue in $issues) {
+foreach ($issue in $issues[4..5]) {
     $body = $issue | ConvertTo-Json -Depth 5
     try {
         $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $headers -Body $body
     } catch {
         Write-Host "Error creating the issue: $($_.Exception.Message)" -ForegroundColor Red
+        Break
     }
 }
